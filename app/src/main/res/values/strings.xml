@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">Nova</string>
+    <string name="nova_accessibility_service_label">Nova Voice Screen Control</string>
+    <string name="nova_accessibility_description">Allows Nova to tap, scroll, type, navigate, and read on-screen UI elements hands-free when you speak commands.</string>
+    <string name="nova_tile_label">Ask Nova</string>
+    <string name="nova_widget_title">Hey Nova</string>
+    <string name="nova_widget_subtitle">Tap to speak</string>
+</resources>

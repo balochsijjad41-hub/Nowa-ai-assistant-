@@ -1,0 +1,260 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidTimestamp(ts) {
+      return ts is timestamp && ts <= request.time;
+    }
+
+    function isValidUserSettings(data, userId) {
+      return data.userId == userId &&
+        data.wakeWord is string && data.wakeWord.size() >= 2 && data.wakeWord.size() <= 30 &&
+        data.voiceGender in ['FEMALE', 'MALE'] &&
+        data.voiceSpeed is number && data.voiceSpeed >= 0.5 && data.voiceSpeed <= 2.0 &&
+        data.language in ['EN', 'UR', 'HI'] &&
+        data.personality in ['PROFESSIONAL', 'FRIENDLY', 'FUNNY'] &&
+        data.themeMode in ['DARK', 'LIGHT', 'AUTO'] &&
+        data.listeningMode in ['ALWAYS_ON', 'SCREEN_ON', 'CHARGING', 'SCHEDULED', 'LOW_POWER'] &&
+        data.alwaysListening is bool &&
+        data.runInBackground is bool &&
+        data.startOnBoot is bool &&
+        data.keepAlive is bool &&
+        data.onDeviceProcessing is bool &&
+        data.speakerRecognition is bool &&
+        data.autoDeleteDays is int && data.autoDeleteDays >= 0 && data.autoDeleteDays <= 365 &&
+        data.pinConfirmationEnabled is bool &&
+        data.appLockEnabled is bool &&
+        data.emergencyContact is string && data.emergencyContact.size() <= 100;
+    }
+
+    function isValidCustomCommand(data, userId) {
+      return data.userId == userId &&
+        data.phrase is string && data.phrase.size() >= 1 && data.phrase.size() <= 120 &&
+        data.category is string && data.category.size() >= 1 && data.category.size() <= 40 &&
+        data.actionsSummary is string && data.actionsSummary.size() >= 1 && data.actionsSummary.size() <= 300 &&
+        data.actionSteps is list && data.actionSteps.size() >= 1 && data.actionSteps.size() <= 10 &&
+        data.actionSteps[0] is string &&
+        data.permissionPolicy in ['ALWAYS_ALLOW', 'ASK_EACH_TIME', 'BLOCK'] &&
+        data.usageCount is int && data.usageCount >= 0 && data.usageCount <= 1000000 &&
+        data.enabled is bool;
+    }
+
+    function isValidAutomationRoutine(data, userId) {
+      return data.userId == userId &&
+        data.title is string && data.title.size() >= 1 && data.title.size() <= 80 &&
+        data.triggerType in ['VOICE', 'TIME', 'LOCATION', 'CHARGING', 'APP_OPEN'] &&
+        data.triggerDetail is string && data.triggerDetail.size() >= 1 && data.triggerDetail.size() <= 120 &&
+        data.actionSteps is list && data.actionSteps.size() >= 1 && data.actionSteps.size() <= 12 &&
+        data.actionSteps[0] is string &&
+        data.enabled is bool &&
+        data.runCount is int && data.runCount >= 0 && data.runCount <= 1000000;
+    }
+
+    function isValidHistoryEntry(data, userId) {
+      return data.userId == userId &&
+        data.userQuery is string && data.userQuery.size() >= 1 && data.userQuery.size() <= 1000 &&
+        data.novaReply is string && data.novaReply.size() >= 1 && data.novaReply.size() <= 4000 &&
+        data.intentTag is string && data.intentTag.size() >= 1 && data.intentTag.size() <= 60 &&
+        data.executedActions is list && data.executedActions.size() <= 12 &&
+        (data.executedActions.size() == 0 || data.executedActions[0] is string) &&
+        data.modeUsed is string && data.modeUsed.size() >= 1 && data.modeUsed.size() <= 40 &&
+        data.bookmarked is bool;
+    }
+
+    function isValidSmartDevice(data, userId) {
+      return data.userId == userId &&
+        data.name is string && data.name.size() >= 1 && data.name.size() <= 60 &&
+        data.room is string && data.room.size() >= 1 && data.room.size() <= 60 &&
+        data.deviceType in ['LIGHT', 'AC', 'TV', 'LOCK', 'SPEAKER'] &&
+        data.poweredOn is bool &&
+        data.levelValue is int && data.levelValue >= 0 && data.levelValue <= 100 &&
+        data.voiceEnabled is bool;
+    }
+
+    match /users/{userId} {
+      allow get: if isOwner(userId) && isValidId(userId);
+      allow list: if false;
+      allow create: if isOwner(userId) &&
+        isValidId(userId) &&
+        incoming().keys().hasAll([
+          'userId', 'wakeWord', 'voiceGender', 'voiceSpeed', 'language',
+          'personality', 'themeMode', 'listeningMode', 'alwaysListening',
+          'runInBackground', 'startOnBoot', 'keepAlive', 'onDeviceProcessing',
+          'speakerRecognition', 'autoDeleteDays', 'pinConfirmationEnabled',
+          'appLockEnabled', 'emergencyContact', 'createdAt', 'updatedAt'
+        ]) &&
+        incoming().keys().hasOnly([
+          'userId', 'wakeWord', 'voiceGender', 'voiceSpeed', 'language',
+          'personality', 'themeMode', 'listeningMode', 'alwaysListening',
+          'runInBackground', 'startOnBoot', 'keepAlive', 'onDeviceProcessing',
+          'speakerRecognition', 'autoDeleteDays', 'pinConfirmationEnabled',
+          'appLockEnabled', 'emergencyContact', 'createdAt', 'updatedAt'
+        ]) &&
+        isValidTimestamp(incoming().createdAt) &&
+        isValidTimestamp(incoming().updatedAt) &&
+        isValidUserSettings(incoming(), userId);
+
+      allow update: if isOwner(userId) &&
+        isValidId(userId) &&
+        incoming().userId == existing().userId &&
+        incoming().createdAt == existing().createdAt &&
+        isValidTimestamp(incoming().updatedAt) &&
+        isValidUserSettings(incoming(), userId) &&
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'wakeWord', 'voiceGender', 'voiceSpeed', 'language',
+          'personality', 'themeMode', 'listeningMode', 'alwaysListening',
+          'runInBackground', 'startOnBoot', 'keepAlive', 'onDeviceProcessing',
+          'speakerRecognition', 'autoDeleteDays', 'pinConfirmationEnabled',
+          'appLockEnabled', 'emergencyContact', 'updatedAt'
+        ]);
+
+      allow delete: if isOwner(userId) && isValidId(userId);
+
+      match /commands/{commandId} {
+        allow get: if isOwner(userId) && isValidId(commandId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) &&
+          isValidId(commandId) &&
+          incoming().keys().hasAll([
+            'userId', 'phrase', 'category', 'actionsSummary', 'actionSteps',
+            'permissionPolicy', 'usageCount', 'enabled', 'createdAt', 'updatedAt'
+          ]) &&
+          incoming().keys().hasOnly([
+            'userId', 'phrase', 'category', 'actionsSummary', 'actionSteps',
+            'permissionPolicy', 'usageCount', 'enabled', 'createdAt', 'updatedAt'
+          ]) &&
+          isValidTimestamp(incoming().createdAt) &&
+          isValidTimestamp(incoming().updatedAt) &&
+          isValidCustomCommand(incoming(), userId);
+
+        allow update: if isOwner(userId) &&
+          isValidId(commandId) &&
+          incoming().userId == existing().userId &&
+          incoming().createdAt == existing().createdAt &&
+          isValidTimestamp(incoming().updatedAt) &&
+          isValidCustomCommand(incoming(), userId) &&
+          incoming().diff(existing()).affectedKeys().hasOnly([
+            'phrase', 'category', 'actionsSummary', 'actionSteps',
+            'permissionPolicy', 'usageCount', 'enabled', 'updatedAt'
+          ]);
+
+        allow delete: if isOwner(userId) && isValidId(commandId);
+      }
+
+      match /automations/{automationId} {
+        allow get: if isOwner(userId) && isValidId(automationId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) &&
+          isValidId(automationId) &&
+          incoming().keys().hasAll([
+            'userId', 'title', 'triggerType', 'triggerDetail', 'actionSteps',
+            'enabled', 'runCount', 'createdAt', 'updatedAt'
+          ]) &&
+          incoming().keys().hasOnly([
+            'userId', 'title', 'triggerType', 'triggerDetail', 'actionSteps',
+            'enabled', 'runCount', 'createdAt', 'updatedAt'
+          ]) &&
+          isValidTimestamp(incoming().createdAt) &&
+          isValidTimestamp(incoming().updatedAt) &&
+          isValidAutomationRoutine(incoming(), userId);
+
+        allow update: if isOwner(userId) &&
+          isValidId(automationId) &&
+          incoming().userId == existing().userId &&
+          incoming().createdAt == existing().createdAt &&
+          isValidTimestamp(incoming().updatedAt) &&
+          isValidAutomationRoutine(incoming(), userId) &&
+          incoming().diff(existing()).affectedKeys().hasOnly([
+            'title', 'triggerType', 'triggerDetail', 'actionSteps',
+            'enabled', 'runCount', 'updatedAt'
+          ]);
+
+        allow delete: if isOwner(userId) && isValidId(automationId);
+      }
+
+      match /history/{entryId} {
+        allow get: if isOwner(userId) && isValidId(entryId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) &&
+          isValidId(entryId) &&
+          incoming().keys().hasAll([
+            'userId', 'userQuery', 'novaReply', 'intentTag',
+            'executedActions', 'modeUsed', 'bookmarked', 'createdAt', 'updatedAt'
+          ]) &&
+          incoming().keys().hasOnly([
+            'userId', 'userQuery', 'novaReply', 'intentTag',
+            'executedActions', 'modeUsed', 'bookmarked', 'createdAt', 'updatedAt'
+          ]) &&
+          isValidTimestamp(incoming().createdAt) &&
+          isValidTimestamp(incoming().updatedAt) &&
+          isValidHistoryEntry(incoming(), userId);
+
+        allow update: if isOwner(userId) &&
+          isValidId(entryId) &&
+          incoming().userId == existing().userId &&
+          incoming().createdAt == existing().createdAt &&
+          isValidTimestamp(incoming().updatedAt) &&
+          isValidHistoryEntry(incoming(), userId) &&
+          incoming().diff(existing()).affectedKeys().hasOnly([
+            'bookmarked', 'updatedAt'
+          ]);
+
+        allow delete: if isOwner(userId) && isValidId(entryId);
+      }
+
+      match /smartDevices/{deviceId} {
+        allow get: if isOwner(userId) && isValidId(deviceId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) &&
+          isValidId(deviceId) &&
+          incoming().keys().hasAll([
+            'userId', 'name', 'room', 'deviceType', 'poweredOn',
+            'levelValue', 'voiceEnabled', 'createdAt', 'updatedAt'
+          ]) &&
+          incoming().keys().hasOnly([
+            'userId', 'name', 'room', 'deviceType', 'poweredOn',
+            'levelValue', 'voiceEnabled', 'createdAt', 'updatedAt'
+          ]) &&
+          isValidTimestamp(incoming().createdAt) &&
+          isValidTimestamp(incoming().updatedAt) &&
+          isValidSmartDevice(incoming(), userId);
+
+        allow update: if isOwner(userId) &&
+          isValidId(deviceId) &&
+          incoming().userId == existing().userId &&
+          incoming().createdAt == existing().createdAt &&
+          isValidTimestamp(incoming().updatedAt) &&
+          isValidSmartDevice(incoming(), userId) &&
+          incoming().diff(existing()).affectedKeys().hasOnly([
+            'name', 'room', 'poweredOn', 'levelValue', 'voiceEnabled', 'updatedAt'
+          ]);
+
+        allow delete: if isOwner(userId) && isValidId(deviceId);
+      }
+    }
+  }
+}

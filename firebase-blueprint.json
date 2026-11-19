@@ -1,0 +1,123 @@
+{
+  "entities": {
+    "UserSettings": {
+      "title": "UserSettings",
+      "description": "User preferences, voice persona, background service settings, and security configuration for Nova.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "wakeWord": { "type": "string" },
+        "voiceGender": { "type": "string", "enum": ["FEMALE", "MALE"] },
+        "voiceSpeed": { "type": "number" },
+        "language": { "type": "string", "enum": ["EN", "UR", "HI"] },
+        "personality": { "type": "string", "enum": ["PROFESSIONAL", "FRIENDLY", "FUNNY"] },
+        "themeMode": { "type": "string", "enum": ["DARK", "LIGHT", "AUTO"] },
+        "listeningMode": { "type": "string", "enum": ["ALWAYS_ON", "SCREEN_ON", "CHARGING", "SCHEDULED", "LOW_POWER"] },
+        "alwaysListening": { "type": "boolean" },
+        "runInBackground": { "type": "boolean" },
+        "startOnBoot": { "type": "boolean" },
+        "keepAlive": { "type": "boolean" },
+        "onDeviceProcessing": { "type": "boolean" },
+        "speakerRecognition": { "type": "boolean" },
+        "autoDeleteDays": { "type": "integer" },
+        "pinConfirmationEnabled": { "type": "boolean" },
+        "appLockEnabled": { "type": "boolean" },
+        "emergencyContact": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "wakeWord", "voiceGender", "voiceSpeed", "language", "personality", "themeMode", "listeningMode", "createdAt", "updatedAt"]
+    },
+    "CustomCommand": {
+      "title": "CustomCommand",
+      "description": "User-defined or customized voice command mapping a spoken phrase to a multi-step action chain.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "phrase": { "type": "string" },
+        "category": { "type": "string" },
+        "actionsSummary": { "type": "string" },
+        "actionSteps": { "type": "array" },
+        "permissionPolicy": { "type": "string", "enum": ["ALWAYS_ALLOW", "ASK_EACH_TIME", "BLOCK"] },
+        "usageCount": { "type": "integer" },
+        "enabled": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "phrase", "category", "actionsSummary", "actionSteps", "permissionPolicy", "usageCount", "enabled", "createdAt", "updatedAt"]
+    },
+    "AutomationRoutine": {
+      "title": "AutomationRoutine",
+      "description": "Multi-action automation routine triggered by voice, time, location, charging, or app open.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "triggerType": { "type": "string", "enum": ["VOICE", "TIME", "LOCATION", "CHARGING", "APP_OPEN"] },
+        "triggerDetail": { "type": "string" },
+        "actionSteps": { "type": "array" },
+        "enabled": { "type": "boolean" },
+        "runCount": { "type": "integer" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "title", "triggerType", "triggerDetail", "actionSteps", "enabled", "runCount", "createdAt", "updatedAt"]
+    },
+    "HistoryEntry": {
+      "title": "HistoryEntry",
+      "description": "Voice assistant conversation turn with user query, Nova reply, executed actions, and mode.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "userQuery": { "type": "string" },
+        "novaReply": { "type": "string" },
+        "intentTag": { "type": "string" },
+        "executedActions": { "type": "array" },
+        "modeUsed": { "type": "string" },
+        "bookmarked": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "userQuery", "novaReply", "intentTag", "executedActions", "modeUsed", "bookmarked", "createdAt", "updatedAt"]
+    },
+    "SmartDevice": {
+      "title": "SmartDevice",
+      "description": "Voice-controlled smart home device card for lights, AC, TV, locks, and speakers.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "room": { "type": "string" },
+        "deviceType": { "type": "string", "enum": ["LIGHT", "AC", "TV", "LOCK", "SPEAKER"] },
+        "poweredOn": { "type": "boolean" },
+        "levelValue": { "type": "integer" },
+        "voiceEnabled": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "name", "room", "deviceType", "poweredOn", "levelValue", "voiceEnabled", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserSettings" },
+      "description": "Per-user Nova configuration and profile settings."
+    },
+    "/users/{userId}/commands/{commandId}": {
+      "schema": { "$ref": "#/entities/CustomCommand" },
+      "description": "User custom voice command chains."
+    },
+    "/users/{userId}/automations/{automationId}": {
+      "schema": { "$ref": "#/entities/AutomationRoutine" },
+      "description": "User automation routines and multi-action triggers."
+    },
+    "/users/{userId}/history/{entryId}": {
+      "schema": { "$ref": "#/entities/HistoryEntry" },
+      "description": "User voice conversation and command execution log."
+    },
+    "/users/{userId}/smartDevices/{deviceId}": {
+      "schema": { "$ref": "#/entities/SmartDevice" },
+      "description": "User smart home devices controlled by Nova."
+    }
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "name": "Nova",
+  "description": "Futuristic autonomous AI voice assistant for hands-free device control, routines, camera vision, and background listening.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
